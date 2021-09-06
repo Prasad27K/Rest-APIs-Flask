@@ -74,3 +74,19 @@ def deleteSyllabus(syllabusId):
             return {"Message": "Syllabus Item  Deleted"}, 200
         else:
             return {"Message": "Resourses not found"}, 404
+
+@app.route('/api/syllabus/<syllabusId>', methods=['GET'])
+def searchSyllabus(syllabusId):
+    if request.method == "GET":
+        id = syllabusId
+        cursor = connection.cursor()
+        sql = "SELECT * FROM syllabus WHERE id = %s"
+        value = (id)
+        status = cursor.execute(sql, value)
+        print(status)
+        results = cursor.fetchall()
+        print(results)
+        if status == 1:
+            return jsonify(results), 200
+        else:
+            return {"Message": "Resourses not found"}, 404
