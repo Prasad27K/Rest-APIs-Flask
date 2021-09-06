@@ -10,6 +10,8 @@ connection = pymysql.connect(host='165.22.14.77',
 
 app = Flask(__name__)
 
+
+
 @app.route('/api/syllabus')
 def showSyllabus():
     cursor = connection.cursor()
