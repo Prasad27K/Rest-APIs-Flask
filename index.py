@@ -1,5 +1,3 @@
-from unicodedata import is_normalized
-from dns.message import Message
 from flask import Flask
 from flask import request, jsonify
 import pymysql.cursors
@@ -17,8 +15,6 @@ app = Flask(__name__)
 def validateToken():
     print(uuid.uuid4())
     path = request.path
-    print(path)
-    print("First request")
     if((path != "/api/signin") and (path != "/api/signup")):
         token = request.headers['Authorization']
         setattr(request, "token", token)
@@ -64,7 +60,8 @@ def signUp():
         userName = payLoad['userName']
         password = payLoad['password']
         try:
-            isEmailValid = validate_email(userName)
+            isEmailValid = validate_email(userName
+            )
         except EmailNotValidError as e:
             print(e)
             return {"Message": str(e)}, 400
@@ -78,6 +75,7 @@ def signUp():
                 insertQuery = "INSERT INTO users(userName, password, token) Values(%s, %s, %s)"
                 values = (userName, password, token)
                 status = cursor.execute(insertQuery, values)
+                connection.commit()
                 if(status == 1):
                     return {"message": "Signed Up successfully"}, 201
             else:
@@ -141,15 +139,15 @@ def insertSyllabus():
                 del errorMessagesObj["isFormValid"]
                 return errorMessagesObj, 400
         except TypeError as e:
-            print(e)
-            return {"Message": "Please provide the field" + str(e)}, 400
+            return {"Message": str(e)}, 400
         except KeyError as e:
-            print(e)
             return {"Message": "Please provide the field" + str(e)}, 400
         
-@app.route('/api/syllabus/<syllabusId>', methods=['PUT'])
-def updateSyllabus(syllabusId):
+@app.route('/api/syllabus/<id>', methods=['PUT'])
+def updateSyllabus(id):
     if request.method == "PUT":
+        syllabusId = id
+        userId = request.userId
         payLoad = request.json
         try:
             errorMessagesObj = formValidations(payLoad)
@@ -158,14 +156,13 @@ def updateSyllabus(syllabusId):
                 description = payLoad['description']
                 learningObjectives = payLoad['learningObjectives']
                 cursor = connection.cursor()
-                insertQuery = "UPDATE syllabus SET name = %s, description = %s, learningObjectives = %s where id = %s"
-                values = (name, description, learningObjectives, syllabusId)
+                insertQuery = "UPDATE syllabus SET name = %s, description = %s, learningObjectives = %s WHERE id = %s AND userId = %s"
+                values = (name, description, learningObjectives, syllabusId, userId)
                 status = cursor.execute(insertQuery, values)
                 connection.commit()
                 if (status == 1):
-                    id = syllabusId
                     sql = "SELECT * FROM syllabus WHERE id = %s"
-                    value = (id)
+                    value = (syllabusId)
                     cursor.execute(sql, value)
                     results = cursor.fetchall()
                     return jsonify(results), 200
@@ -177,15 +174,16 @@ def updateSyllabus(syllabusId):
         except KeyError as e:
             return {"Message": "Please provide the field" + str(e)}, 400
         except TypeError as e:
-            print(e)
             return {"Message": str(e)}, 400
 
-@app.route('/api/syllabus/<syllabusId>', methods=['DELETE'])
-def deleteSyllabus(syllabusId):
+@app.route('/api/syllabus/<id>', methods=['DELETE'])
+def deleteSyllabus(id):
     if request.method == "DELETE":
+        userId = request.userId
         cursor = connection.cursor()
-        insertQuery = "UPDATE syllabus SET status = 0 where id = %s"
-        values = (syllabusId)
+        insertQuery = "UPDATE syllabus SET status = 0 where id = %s AND userId = %s"
+        syllabusId = id
+        values = (syllabusId, userId)
         status = cursor.execute(insertQuery, values)
         connection.commit()
         if (status == 1):
@@ -193,17 +191,16 @@ def deleteSyllabus(syllabusId):
         else:
             return {"Message": "Resourses not found"}, 404
 
-@app.route('/api/syllabus/<syllabusId>', methods=['GET'])
-def searchSyllabus(syllabusId):
+@app.route('/api/syllabus/<id>', methods=['GET'])
+def searchSyllabus(id):
     if request.method == "GET":
-        id = syllabusId
+        syllabusId = id
+        userId = request.userId
         cursor = connection.cursor()
-        sql = "SELECT * FROM syllabus WHERE id = %s"
-        value = (id)
+        sql = "SELECT * FROM syllabus WHERE id = %s AND userId = %s AND status = 1"
+        value = (syllabusId, userId)
         status = cursor.execute(sql, value)
-        print(status)
         results = cursor.fetchall()
-        print(results)
         if status == 1:
             return jsonify(results), 200
         else:
